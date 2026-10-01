@@ -29,7 +29,7 @@ import type {
 import { useNavPose } from "./useNavPose";
 import { buildWalkGrid } from "./walkable";
 import type { WalkGrid } from "./walkable";
-import { xrNavSupported, runNavXr } from "./xrNav";
+import { xrErrorMessage, xrNavSupported, runNavXr } from "./xrNav";
 
 export function App() {
   const [step, setStep] = useState<StepId>("plan");
@@ -437,7 +437,7 @@ export function App() {
                   type="button"
                   className="ghost"
                   disabled={!route || !pose || !xrReady}
-                  onClick={() => route && pose && void runNavXr(route, pose).catch(() => setError("Could not start AR."))}
+                  onClick={() => route && pose && void runNavXr(route, pose).catch((err) => setError(xrErrorMessage(err)))}
                 >
                   Arrow in the room
                 </button>
