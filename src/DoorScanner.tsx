@@ -7,7 +7,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onScan: (doorId: string, side: DoorSide) => void;
-  onUnknown: () => void;
+  onUnknown: (reason: "unreadable") => void;
 };
 
 export function DoorScanner({ open, onClose, onScan, onUnknown }: Props) {
@@ -66,7 +66,7 @@ export function DoorScanner({ open, onClose, onScan, onUnknown }: Props) {
                 onClose();
                 return;
               }
-              onUnknown();
+              onUnknown("unreadable");
             }
           }
         }

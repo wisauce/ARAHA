@@ -1,4 +1,3 @@
-import { uid } from "./geometry";
 import { bearing } from "./pathfind";
 import { nearestWalkablePixel } from "./pathfind";
 import type { DoorFix, DoorLandmark, DoorSide } from "./types";
@@ -58,14 +57,31 @@ export function sidesForGap(grid: WalkGrid, nx: number, ny: number): Pick<DoorLa
   return null;
 }
 
+/** Same gap on the plan always gets the same id (for QR codes across devices). */
+export function doorIdFromGap(gx: number, gy: number): string {
+  return `gap-${gx}-${gy}`;
+}
+
 export function createDoorAt(grid: WalkGrid, nx: number, ny: number, name: string): DoorLandmark | null {
   const sides = sidesForGap(grid, nx, ny);
   if (!sides) return null;
+  const gx = Math.round(sides.gap.x * grid.width);
+  const gy = Math.round(sides.gap.y * grid.height);
   return {
-    id: uid(),
+    id: doorIdFromGap(gx, gy),
     name,
     ...sides,
   };
+}
+
+/** Re-key doors to stable gap ids and refresh geometry (fixes old random UUID landmarks). */
+export function normalizeDoors(grid: WalkGrid, doors: DoorLandmark[]): DoorLandmark[] {
+  const out: DoorLandmark[] = [];
+  for (const door of doors) {
+    const fresh = createDoorAt(grid, door.gap.x, door.gap.y, door.name);
+    if (fresh) out.push(fresh);
+  }
+  return out;
 }
 
 function probesBothWays(grid: WalkGrid, x: number, y: number): boolean {
@@ -140,12 +156,13 @@ export function doorUrl(doorId: string, side: DoorSide): string {
 
 export function parseDoorUrl(href: string): { doorId: string; side: DoorSide } | null {
   try {
-    const url = new URL(href, window.location.origin);
-    const match = url.pathname.match(/\/door\/([^/]+)\/?$/);
+    const trimmed = href.trim();
+    const url = new URL(trimmed, window.location.origin);
+    const match = url.pathname.match(/\/door\/([^/]+)\/?$/i);
     if (!match) return null;
-    const side = url.searchParams.get("side");
+    const side = url.searchParams.get("side")?.toLowerCase();
     if (side !== "a" && side !== "b") return null;
-    return { doorId: match[1], side };
+    return { doorId: decodeURIComponent(match[1]), side };
   } catch {
     return null;
   }

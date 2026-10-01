@@ -6,6 +6,7 @@ import {
   destinationPoint,
   fixFromDoor,
   parseDoorUrl,
+  normalizeDoors,
   suggestDoors,
 } from "./doors";
 import { encodeFloorPlan } from "./image";
@@ -100,6 +101,14 @@ export function App() {
   }, [hydrated, walk, doors.length]);
 
   useEffect(() => {
+    if (!hydrated || !walk || doors.length === 0) return;
+    if (!doors.some((d) => !/^gap-\d+-\d+$/.test(d.id))) return;
+    setDoors(normalizeDoors(walk, doors));
+  }, [hydrated, walk, doors]);
+
+
+
+  useEffect(() => {
     if (!hydrated) return;
     const timer = window.setTimeout(() => {
       saveProject({ floorPlan, map, doors, doorFix, destination }).catch(() => undefined);
@@ -117,7 +126,7 @@ export function App() {
     if (!parsed) return;
     const door = doors.find((item) => item.id === parsed.doorId);
     if (!door) {
-      setError("That QR code is not a door on this floor.");
+      setError("No matching door on this plan. Open this site at your live URL, go to Doors, and print a new QR (old codes used random ids).");
       return;
     }
     applyDoorFix(door, parsed.side);
@@ -147,7 +156,7 @@ export function App() {
   function onDoorScan(doorId: string, side: DoorSide) {
     const door = doors.find((item) => item.id === doorId);
     if (!door) {
-      setError("That QR code is not a door on this floor.");
+      setError("No matching door on this plan. Open this site at your live URL, go to Doors, and print a new QR (old codes used random ids).");
       return;
     }
     applyDoorFix(door, side);
@@ -465,7 +474,13 @@ export function App() {
         open={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScan={onDoorScan}
-        onUnknown={() => setError("That QR code is not a door on this floor.")}
+        onUnknown={(reason) =>
+          setError(
+            reason === "unreadable"
+              ? "That scan is not a door link. Use a QR from the Doors step on this site."
+              : "No matching door on this plan. Regenerate the QR from Doors on this URL.",
+          )
+        }
       />
 
       <input ref={planInput} className="hidden-file" type="file" accept="image/*" onChange={(event) => void onFloorFile(event)} />
